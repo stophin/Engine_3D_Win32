@@ -113,5 +113,7 @@ public:
 	}
 }EPoint,* PEPoint;
 
+float Q_rsqrt(float number);
+
 #endif //end of _EPOINT_H_
 //end of file

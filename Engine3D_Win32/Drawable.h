@@ -23,3 +23,5 @@ void render(VObj * range, VObj * range0, VObj * range1);
 VOID onScroll(FLOAT delta);
 VOID onMenu(FLOAT x, FLOAT y, INT mode);
 VOID onDrag(FLOAT x, FLOAT y, INT mode);
+VOID onKeyDown(WPARAM wParam, LPARAM lParam);
+VOID onKeyUp(WPARAM wParam, LPARAM lParam);

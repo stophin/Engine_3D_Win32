@@ -100,7 +100,7 @@ void render(VObj * range, VObj * range0, VObj * range1) {
 									//ege::fillpoly_gradient(3, cps, image);
 									// draw outline
 									if (draw_line > 0) {
-										pen.SetColor(Color(255, 2555, 2555));
+										pen.SetColor(Color(255, 255, 255));
 										graphics->DrawLine(&pen, v0->x0, v0->y0, v1->x0, v1->y0);
 										graphics->DrawLine(&pen, v1->x0, v1->y0, v->x0, v->y0);
 										graphics->DrawLine(&pen, v->x0, v->y0, v0->x0, v0->y0);
@@ -445,8 +445,8 @@ void Initialize() {
 	man.addCamera(50, 50, 50, 1000, 90, 90).move(0, 0, -200);
 	//man.addCamera(30, 30, 60, 600, 30, 30).move(0, 0, -100);
 
-	//man.addLight(9, -51, -60);
-	man.addLight(5, 8, 220);
+	man.addLight(9, -51, -60);
+	//man.addLight(5, 8, 220);
 	//man.addLight(-1000, 100, 100);
 
 	int count = 2;
@@ -622,5 +622,22 @@ VOID onDrag(FLOAT x, FLOAT y, INT mode)
 	{
 		drag.X = 0;
 		drag.Y = 0;
+	}
+}
+
+VOID onKeyDown(WPARAM wParam, LPARAM lParam) {
+	char c = (char)wParam;
+	switch (c) {
+	case 'L':
+		move_light = 1;
+		break;
+	}
+}
+VOID onKeyUp(WPARAM wParam, LPARAM lParam) {
+	char c = (char)wParam;
+	switch (c) {
+	case 'L':
+		move_light = -1;
+		break;
 	}
 }

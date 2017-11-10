@@ -78,20 +78,28 @@ struct Vert3D {
 
 	Vert3D& normalize() {
 		EFTYPE x = this->x, y = this->y, z = this->z, w = this->w;
-		EFTYPE d = sqrt(x * x + y * y + z * z);
-		this->x /= d;
-		this->y /= d;
-		this->z /= d;
+		//EFTYPE d = sqrt(x * x + y * y + z * z);
+		//this->x /= d;
+		//this->y /= d;
+		//this->z /= d;
+		EFTYPE d = Q_rsqrt(x * x + y * y + z * z);
+		this->x *= d;
+		this->y *= d;
+		this->z *= d;
 
 		return *this;
 	}
 
 	FLOAT operator &(const Vert3D& v) const{
 		EFTYPE x = this->x, y = this->y, z = this->z, w = this->w;
-		EFTYPE ra = sqrt(x * x + y * y + z * z);
-		EFTYPE rb = sqrt(v.x * v.x + v.y * v.y + v.z * v.z);
+		//EFTYPE ra = sqrt(x * x + y * y + z * z);
+		//EFTYPE rb = sqrt(v.x * v.x + v.y * v.y + v.z * v.z);
 
-		return (x * v.x + y * v.y + z * v.z) / (ra * rb);
+		//return (x * v.x + y * v.y + z * v.z) / (ra * rb);
+		EFTYPE ra = Q_rsqrt(x * x + y * y + z * z);
+		EFTYPE rb = Q_rsqrt(v.x * v.x + v.y * v.y + v.z * v.z);
+
+		return (x * v.x + y * v.y + z * v.z) * (ra * rb);
 	}
 
 

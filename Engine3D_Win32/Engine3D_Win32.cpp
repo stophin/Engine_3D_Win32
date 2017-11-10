@@ -102,7 +102,7 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
    hInst = hInstance; // 将实例句柄存储在全局变量中
 
    hWnd = CreateWindow(szWindowClass, szTitle, WS_OVERLAPPEDWINDOW,
-      CW_USEDEFAULT, 0, CW_USEDEFAULT, 0, NULL, NULL, hInstance, NULL);
+      CW_USEDEFAULT, 0, 300, 200, NULL, NULL, hInstance, NULL);
 
    if (!hWnd)
    {
@@ -199,6 +199,14 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		break;
 	case WM_MOUSEWHEEL:
 		onScroll(GET_WHEEL_DELTA_WPARAM(wParam));
+		onUpdate(hWnd);
+		break;
+	case WM_KEYDOWN:
+		onKeyDown(wParam, lParam);
+		onUpdate(hWnd);
+		break;
+	case WM_KEYUP:
+		onKeyUp(wParam, lParam);
 		onUpdate(hWnd);
 		break;
 	case WM_DESTROY:

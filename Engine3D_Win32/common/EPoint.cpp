@@ -120,9 +120,12 @@ void EPoint::Set(const EPoint& p)
 
 void EPoint::Normalize(EPTYPE resize)
 {
-	EFTYPE n=(EFTYPE)sqrt(EFTYPE(x*x+y*y));
-	x=(EPTYPE)((EFTYPE)(x*resize)/n);
-	y=(EPTYPE)((EFTYPE)(y*resize)/n);
+	//EFTYPE n=(EFTYPE)sqrt(EFTYPE(x*x+y*y));
+	//x=(EPTYPE)((EFTYPE)(x*resize)/n);
+	//y=(EPTYPE)((EFTYPE)(y*resize)/n);
+	EFTYPE n=(EFTYPE)Q_rsqrt(EFTYPE(x*x+y*y));
+	x=(EPTYPE)((EFTYPE)(x*resize)*n);
+	y=(EPTYPE)((EFTYPE)(y*resize)*n);
 }
 
 bool EPoint::IsIn(const EPoint& lp,const EPoint& rbgm,E_RectType mode) const
@@ -258,6 +261,23 @@ void EPoint::Rotate(EFTYPE angle)
 
 	x=EPTYPE(tx*cos(angle)-ty*sin(angle));
 	y=EPTYPE(ty*cos(angle)+tx*sin(angle));
+}
+
+float Q_rsqrt(float number)
+{
+	long i;
+	float x2, y;
+	const float threehalfs = 1.5F;
+
+	x2 = number * 0.5F;
+	y = number;
+	i = *(long *)&y;              // evil floating point bit level hacking
+	i = 0x5f3759df - (i >> 1);               // what the fuck? 
+	y = *(float *)&i;
+	y = y * (threehalfs - (x2 * y * y));   // 1st iteration
+	//	y  = y * ( threehalfs - ( x2 * y * y ) );   // 2nd iteration, this can be removed
+
+	return y;
 }
 
 //end of file
