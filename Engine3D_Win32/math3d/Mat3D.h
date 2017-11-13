@@ -152,6 +152,7 @@ public:
 		return *this;
 	}
 
+	//M-T
 	Mat3D& transpose() {
 		Mat mx = this->mx, my = this->my, mz = this->mz, mw = this->mw;
 		this->mx.y = this->my.x;

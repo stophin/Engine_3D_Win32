@@ -73,6 +73,7 @@ public:
 
 	EFTYPE backface;
 
+	// for multilinklist
 	INT uniqueID;
 	VObj * prev[3];
 	VObj * next[3];
@@ -142,9 +143,12 @@ public:
 		return *this;
 	}
 
+	//add vertex to object
 	Object3D& addVert(EFTYPE x, EFTYPE y, EFTYPE z, int anti_n) {
 		this->addVert(x, y, z);
 
+		//force normal vector to be negative
+		//so that this point is not in backface
 		if (anti_n < 0) {
 			VObj * v = this->verts.prev(this->verts.link);
 			if (v) v->n.negative();
@@ -262,6 +266,7 @@ public:
 					v->n_w.normalize();
 					v->v_w.set(v->v) * M;
 
+					// get reflection matrix
 					EFTYPE d = -(v->n_w & v->v_w);
 					EFTYPE nx = v->n_w.x, ny = v->n_w.y, nz = v->n_w.z;
 					v->R.mx.set(1 - 2 * nx * nx, -2 * ny * nx, -2 * nz * nx, -2 * d * nx);
@@ -309,7 +314,6 @@ public:
 							v->xe = max(Vert3D::get_maxx(v0->v_s, v1->v_s, v->v_s), v->xs);
 							v->ys = max(Vert3D::get_miny(v0->v_s, v1->v_s, v->v_s), 0);
 							v->ye = max(Vert3D::get_maxy(v0->v_s, v1->v_s, v->v_s), v->ys);
-
 
 							this->v0 = this->v1;
 							this->v1 = v;

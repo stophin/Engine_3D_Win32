@@ -7,6 +7,7 @@ using namespace Gdiplus;
 #pragma comment(lib, "gdiplus.lib")
 
 #include "math3D/Manager3D.h"
+#include "Device.h"
 
 void onStartup(HWND hWnd);
 void onClose(HWND hWnd);
@@ -16,8 +17,6 @@ void onUpdate(HWND hWnd);
 void onTimer(HWND hWnd);
 
 void Initialize();
-
-void render(VObj * range, VObj * range0, VObj * range1);
 
 
 VOID onScroll(FLOAT delta);
