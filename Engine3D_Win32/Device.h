@@ -382,7 +382,7 @@ struct Device {
 			index; // used for looping
 
 		// pre-compute first pixel address in video buffer
-		vb_start = vb_start + x1 + y1 * lpitch;
+		//vb_start = vb_start + x1 + y1 * lpitch;
 
 		// compute horizontal and vertical deltas
 		dx = x2 - x1;
@@ -424,24 +424,37 @@ struct Device {
 			// initialize error term
 			error = dy2 - dx;
 
+			int ddy = y1 * lpitch, ddx = x1;
 			// draw the line
 			for (index = 0; index <= dx; index++)
 			{
 				// set the pixel
-				*vb_start = color;
+				if (ddx >= lpitch) {
+				}
+				else if (ddx <= 0) {
+				}
+				if (ddy >= height * lpitch) {
+				}
+				else if (ddy <= 0) {
+				}
+				else {
+					//*vb_start = color;
+					vb_start[ddx + ddy] = color;
+				}
 
 				// test if error has overflowed
 				if (error >= 0)
 				{
 					error -= dx2;
 					// move to next line
-					vb_start += y_inc;
-
+					//vb_start += y_inc;
+					ddy += y_inc;
 				}
 				// adjust the error term
 				error += dy2;
 				// move to the next pixel
-				vb_start += x_inc;
+				//vb_start += x_inc;
+				ddx += x_inc;
 			}
 		}
 		else   //斜率大于等于1的情况
@@ -449,10 +462,22 @@ struct Device {
 			// initialize error term
 			error = dx2 - dy;
 
+			int ddy = y1 * lpitch, ddx = x1;
 			for (index = 0; index <= dy; index++)
 			{
 				// set the pixel
-				*vb_start = color;
+				if (ddx >= width) {
+				}
+				else if (ddx <= 0) {
+				}
+				if (ddy >= height * lpitch) {
+				}
+				else if (ddy <= 0) {
+				}
+				else {
+					//*vb_start = color;
+					vb_start[ddx + ddy] = color;
+				}
 
 				// test if error overflowed
 				if (error >= 0)
@@ -460,7 +485,8 @@ struct Device {
 					error -= dy2;//这里按博主推导这里该为error+=dx2-dy2;
 
 					// move to next line
-					vb_start += x_inc;
+					//vb_start += x_inc;
+					ddx += x_inc;
 
 				} // end if error overflowed
 
@@ -468,7 +494,8 @@ struct Device {
 				error += dx2;
 
 				// move to the next pixel
-				vb_start += y_inc;
+				//vb_start += y_inc;
+				ddy += y_inc;
 			}
 		}
 		return(1);
