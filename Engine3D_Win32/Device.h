@@ -109,7 +109,8 @@ struct Device {
 	void RenderMirror(Manager3D & man) {
 
 		Obj3D * obj = man.refl.link, *temp = NULL;
-		Mat3D mm;
+		Mat3D mm, mm_1;
+		Vert3D lookat;
 		if (obj) {
 			// save original camera matrix
 			mm.set(obj->cam->M);

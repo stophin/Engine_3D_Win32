@@ -262,16 +262,16 @@ public:
 					if (this->reflection == 0) {
 						this->reflection--;
 					}*/
-					//normal vector(in world coordinate)
-					v->n_w.set(v->n) * M;
+					//normal vector(in world->camera coordinate)
+					v->n_w.set(v->n) * M * this->cam->M;
 					v->n_w.normalize();
-					//any point in this plan(in world coordinate)
-					v->v_w.set(v->v) * M;
+					//any point in this plan(in world->camera coordinate)
+					v->v_w.set(v->v) * M * this->cam->M;
 
 					// get reflection matrix
 					EFTYPE nx = v->n_w.x, ny = v->n_w.y, nz = v->n_w.z;
 					EFTYPE x0 = v->v_w.x, y0 = v->v_w.y, z0 = v->v_w.z;
-					EFTYPE d = - nx * x0 - ny * y0 - nz * z0;
+					EFTYPE d = -nx * x0 - ny * y0 - nz * z0;// -(v->n_w ^ v->v_w);
 					v->R.mx.set(1 - 2 * nx * nx, -2 * ny * nx, -2 * nz * nx, -2 * d * nx);
 					v->R.my.set(-2 * nx * ny, 1 - 2 * ny * ny, -2 * nz * ny, -2 * d * ny);
 					v->R.mz.set(-2 * nx * nz, -2 * ny * nz, 1 - 2 * nz * nz, -2 * d * nz);
