@@ -89,7 +89,7 @@ void onPaint(HWND hWnd) {
 	}
 	device.ClearBeforeRender();
 	device.Render(man, NULL, NULL, NULL);
-	device.RenderMirror(man);
+	device.RenderMirror(man, move_light);
 	//Blt buffer to window buffer
 	int i, j, index;
 	for (i = 0; i < device.width; i++) {
@@ -136,8 +136,8 @@ void Initialize() {
 	man.addCamera(30, 30, 60, 600, 30, 30).move(0, 0, -100);
 	man.addShadowCamera(100, 100, 500, 1000, 180, 180);
 
-	//man.addLight(9, -51, -60);
 	man.addLight(5, 8, 220);
+	man.addLight(9, -51, -60);
 	man.addLight(-1000, 100, 100);
 
 	int count = 2;

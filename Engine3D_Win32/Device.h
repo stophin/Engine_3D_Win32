@@ -17,6 +17,7 @@ struct Device {
 	DWORD *trans;//Transparent buffer
 	FLOAT *deptr;//Reflection depth buffer
 	DWORD *miror;//Reflection bufer
+	FLOAT *shadr;//Reflection shade buffer
 
 	Graphics * graphics;
 	Gdiplus::Pen pen;
@@ -85,6 +86,10 @@ struct Device {
 			delete[] miror;
 			miror = NULL;
 		}
+		if (shadr) {
+			delete[] shadr;
+			shadr = NULL;
+		}
 	}
 
 	void Resize(INT w, INT h)  {
@@ -99,6 +104,7 @@ struct Device {
 		trans = new DWORD[width * height];
 		deptr = new FLOAT[width * height];
 		miror = new DWORD[width * height];
+		shadr = new FLOAT[width * height];
 		_image = image;
 		_tango = tango;
 		_trans = trans;
@@ -106,11 +112,10 @@ struct Device {
 	}
 
 	//must be called after depth was rendered
-	void RenderMirror(Manager3D & man) {
+	void RenderMirror(Manager3D & man, int move_light) {
 
 		Obj3D * obj = man.refl.link, *temp = NULL;
-		Mat3D mm, mm_1;
-		Vert3D lookat;
+		Mat3D mm;
 		if (obj) {
 			// save original camera matrix
 			mm.set(obj->cam->M);
@@ -138,10 +143,16 @@ struct Device {
 								_tango = _mirror;
 								FLOAT * _depth = depth;
 								depth = deptr;
+								FLOAT * _shade = shade;
+								shade = shadr;
 								//memset(depth, 0, width * height * sizeof(FLOAT));
+								if (move_light > 0) {
+									RenderShade(man);
+								}
 								Render(man, v, v0, v1);
 								// restore target device and depth array
 								depth = _depth;
+								shade = _shade;
 								_tango = _temp;
 
 								DWORD * __trans, *__tango;
@@ -161,6 +172,7 @@ struct Device {
 												int res = Vert3D::IsInTriangle(v0->v_s, v1->v_s, v->v_s, p.set((FLOAT)j, (FLOAT)i, 0));
 												if (res) {
 													__tango = &_tango[index];
+													//adding light reduction in reflection
 													*__tango = Light3D::multi(*__mirror, 0.8);
 													*__depth = z;
 												}
