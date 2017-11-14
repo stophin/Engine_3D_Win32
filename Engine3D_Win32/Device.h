@@ -105,7 +105,7 @@ struct Device {
 		_mirror = miror;
 	}
 
-
+	//must be called after depth was rendered
 	void RenderMirror(Manager3D & man) {
 
 		Obj3D * obj = man.refl.link, *temp = NULL;
@@ -149,7 +149,7 @@ struct Device {
 									for (int j = v->xs; j <= v->xe && j < width; j++) {
 										index = i * width + j;
 										__mirror = &_mirror[index];
-										//if (*__mirror != BLACK) 
+										if (*__mirror != BLACK) 
 										{
 											EFTYPE z = Vert3D::getZ(v->n_d, v->x0, v->y0, v->z, (EFTYPE)j, (EFTYPE)i);
 											__depth = &depth[index];
@@ -160,12 +160,13 @@ struct Device {
 												int res = Vert3D::IsInTriangle(v0->v_s, v1->v_s, v->v_s, p.set((FLOAT)j, (FLOAT)i, 0));
 												if (res) {
 													__tango = &_tango[index];
-													*__tango = Light3D::multi(*__mirror, 0.5);
+													*__tango = Light3D::multi(*__mirror, 0.8);
 													*__depth = z;
 												}
 											}
 											*__mirror = BLACK;
 										}
+										//clear reflection depth at the same time
 										deptr[index] = 0;
 									}
 								}
