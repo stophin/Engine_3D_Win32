@@ -343,19 +343,34 @@ VOID onKeyDown(WPARAM wParam, LPARAM lParam) {
 	case 'P':
 		man.nextCamera();
 		break;
-	case 'A':
+	case 'W':
 		if (mirror) {
 			mirror->rotate(10, 0, 0);
 		}
 		break;
 	case 'S':
 		if (mirror) {
+			mirror->rotate(-10, 0, 0);
+		}
+		break;
+	case 'A':
+		if (mirror) {
 			mirror->rotate(0, 10, 0);
 		}
 		break;
 	case 'D':
 		if (mirror) {
+			mirror->rotate(0, -10, 0);
+		}
+		break;
+	case 'Z':
+		if (mirror) {
 			mirror->rotate(0, 0, 10);
+		}
+		break;
+	case 'C':
+		if (mirror) {
+			mirror->rotate(0, 0, -10);
 		}
 		break;
 	}
