@@ -128,8 +128,7 @@ struct Device {
 							if (v->backface > 0) {
 
 								// set camera matrix to vertex's reflection matrix
-								obj->cam->M.set(mm) *v->R;
-								//obj->cam->M.set(v->R) * mm;
+								obj->cam->M.set(mm) * v->R;
 								man.refresh(0);
 
 								// get reflection projection to array mirror

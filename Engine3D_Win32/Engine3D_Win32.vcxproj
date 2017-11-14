@@ -85,6 +85,7 @@
   <ItemGroup>
     <ClInclude Include="common\EPoint.h" />
     <ClInclude Include="common\MultiLinkList.h" />
+    <ClInclude Include="Device.h" />
     <ClInclude Include="Drawable.h" />
     <ClInclude Include="Engine3D_Win32.h" />
     <ClInclude Include="flatform\ELibrary.h" />
