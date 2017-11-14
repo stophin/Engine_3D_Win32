@@ -18,9 +18,6 @@ struct Device {
 	FLOAT *deptr;//Reflection depth buffer
 	DWORD *miror;//Reflection bufer
 
-	Graphics * graphics;
-	Gdiplus::Pen pen;
-
 	INT draw_line = 1;
 	INT render_linear = 1;
 	INT render_proj = -1;
@@ -44,12 +41,10 @@ struct Device {
 		shade(NULL),
 		trans(NULL),
 		deptr(NULL),
-		miror(NULL),
-		pen((Color(0, 0, 0))){
+		miror(NULL){
 
 	}
-	Device(INT w, INT h) :
-		pen((Color(0, 0, 0))){
+	Device(INT w, INT h){
 		Resize(w, h);
 	}
 	~Device() {
@@ -390,10 +385,6 @@ struct Device {
 										//ege::fillpoly_gradient(3, cps, image);
 										// draw outline
 										if (draw_line > 0) {
-											//pen.SetColor(Color(255, 255, 255));
-											//graphics->DrawLine(&pen, v0->x0, v0->y0, v1->x0, v1->y0);
-											//graphics->DrawLine(&pen, v1->x0, v1->y0, v->x0, v->y0);
-											//graphics->DrawLine(&pen, v->x0, v->y0, v0->x0, v0->y0);
 											Draw_Line(_image, width, height, v0->x0, v0->y0, v1->x0, v1->y0, WHITE);
 											Draw_Line(_image, width, height, v1->x0, v1->y0, v->x0, v->y0, WHITE);
 											Draw_Line(_image, width, height, v->x0, v->y0, v0->x0, v0->y0, WHITE);

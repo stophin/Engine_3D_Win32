@@ -65,7 +65,6 @@ void onPaint(HWND hWnd) {
 		cliHDC = hdc;
 
 		device.Resize(width, height);
-		device.graphics = graphics;
 
 		org.Set(rect.right - rect.left, rect.bottom - rect.top);
 		org /= 2;
