@@ -263,10 +263,10 @@ public:
 						this->reflection--;
 					}*/
 					//normal vector(in world->camera coordinate)
-					v->n_w.set(v->n) * M * this->cam->M;
+					v->n_w.set(v->n) * CM;
 					v->n_w.normalize();
 					//any point in this plan(in world->camera coordinate)
-					v->v_w.set(v->v) * M * this->cam->M;
+					v->v_w.set(v->v) * CM;
 
 					// get reflection matrix
 					EFTYPE nx = v->n_w.x, ny = v->n_w.y, nz = v->n_w.z;
