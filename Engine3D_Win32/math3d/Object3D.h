@@ -262,25 +262,37 @@ public:
 					if (this->reflection == 0) {
 						this->reflection--;
 					}*/
+					EFTYPE nx, ny, nz;
+					EFTYPE x0, y0, z0;
+					EFTYPE d;
+
+					//any point in this plan(in world->camera coordinate)
+					v->v_w.set(v->v) * CM;
+					x0 = v->v_w.x; y0 = v->v_w.y; z0 = v->v_w.z;
+
 					//normal vector(in world->camera coordinate)
 					v->n_w.set(v->n) * CM;
 					v->n_w.normalize();
-					//any point in this plan(in world->camera coordinate)
-					v->v_w.set(v->v) * CM;
 
 					// get reflection matrix
-					EFTYPE nx = v->n_w.x, ny = v->n_w.y, nz = v->n_w.z;
-					EFTYPE x0 = v->v_w.x, y0 = v->v_w.y, z0 = v->v_w.z;
-					EFTYPE d = -nx * x0 - ny * y0 - nz * z0;// -(v->n_w ^ v->v_w);
+					nx = v->n_w.x, ny = v->n_w.y, nz = v->n_w.z;
+					d = -(v->n_w ^ v->v_w);// -nx * x0 - ny * y0 - nz * z0;
 					v->R.mx.set(1 - 2 * nx * nx, -2 * ny * nx, -2 * nz * nx, -2 * d * nx);
 					v->R.my.set(-2 * nx * ny, 1 - 2 * ny * ny, -2 * nz * ny, -2 * d * ny);
 					v->R.mz.set(-2 * nx * nz, -2 * ny * nz, 1 - 2 * nz * nz, -2 * d * nz);
 					v->R.mw.set(0, 0, 0, 1);
-					//v->R.mx.set(1 - 2 * nx * nx, -2 * ny * nx, -2 * nz * nx, 0);
-					//v->R.my.set(-2 * nx * ny, 1 - 2 * ny * ny, -2 * nz * ny,0);
-					//v->R.mz.set(-2 * nx * nz, -2 * ny * nz, 1 - 2 * nz * nz, 0);
-					//v->R.mw.set(-2 * d * nx, -2 * d * ny, -2 * d * nz, 1);
-					//v->R_r.set(v->R) * this->cam->M;
+
+					//normal vector(anti, in world->camera coordinate)
+					v->n_w.set(v->n).negative() * CM;
+					v->n_w.normalize();
+
+					// get reflection matrix(anti)
+					nx = v->n_w.x; ny = v->n_w.y; nz = v->n_w.z;
+					d = -(v->n_w ^ v->v_w);// -nx * x0 - ny * y0 - nz * z0;
+					v->R_r.mx.set(1 - 2 * nx * nx, -2 * ny * nx, -2 * nz * nx, -2 * d * nx);
+					v->R_r.my.set(-2 * nx * ny, 1 - 2 * ny * ny, -2 * nz * ny, -2 * d * ny);
+					v->R_r.mz.set(-2 * nx * nz, -2 * ny * nz, 1 - 2 * nz * nz, -2 * d * nz);
+					v->R_r.mw.set(0, 0, 0, 1);
 				}
 				// object coordinate -> world coordinate -> camera coordinate
 				v->v_c.set(v->v) * CM;

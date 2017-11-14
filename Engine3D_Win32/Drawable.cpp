@@ -134,7 +134,7 @@ void Initialize() {
 
 	man.addCamera(50, 50, 50, 1000, 90, 90).move(0, 0, -200);
 	man.addCamera(30, 30, 60, 600, 30, 30).move(0, 0, -100);
-	man.addShadowCamera(100, 100, 500, 1000, 180, 180);
+	man.addShadowCamera(50, 50, 60, 1000, 120, 120);
 
 	man.addLight(5, 8, 220);
 	man.addLight(9, -51, -60);
@@ -145,7 +145,6 @@ void Initialize() {
 	int i, j, k;
 	EFTYPE r = 10;
 	EFTYPE x_1, x_2, r_1, r_2, p_1 = PI / ((EFTYPE)c), p_2 = 2 * PI / ((EFTYPE)c);
-
 
 	man.addObject().addVert(-10, -10, 10).addVert(10, -10, 10).addVert(-10, 10, 10).addVert(10, 10, 10, -1)
 		.scale(10, 10, 10)./*rotate(50, 0, 0).*/move(0, -30, -300).setColor(GREEN);

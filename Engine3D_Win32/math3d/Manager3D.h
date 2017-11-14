@@ -12,7 +12,7 @@ typedef class Cam3D Cam3D;
 class Cam3D : public Camera3D {
 public:
 	Cam3D(EFTYPE width, EFTYPE height, EFTYPE znear, EFTYPE zfar, EFTYPE angle_width, EFTYPE angle_height) :
-		Camera3D(width, height, znear, zfar, angle_width, angle_height) {
+		Camera3D(width, height, znear, zfar, angle_width, angle_height), type(0) {
 		initialize();
 	}
 	void initialize() {
@@ -22,6 +22,7 @@ public:
 			this->next[i] = NULL;
 		}
 	}
+	int type;
 
 	INT uniqueID;
 	Cam3D * prev[1];
@@ -112,7 +113,7 @@ public:
 typedef class Manager3D Manager3D;
 class Manager3D {
 public:
-	Manager3D() : cams(0), objs(0), lgts(0), tras(0), refl(0), shaw(0){
+	Manager3D() : cams(0), objs(0), lgts(0), tras(0), refl(0){
 
 	}
 	~Manager3D() {
@@ -120,11 +121,9 @@ public:
 		this->objs.~MultiLinkList();
 		this->tras.~MultiLinkList();
 		this->refl.~MultiLinkList();
-		this->shaw.~MultiLinkList();
 	}
 
 	MultiLinkList<Cam3D> cams;
-	MultiLinkList<Cam3D> shaw;
 	MultiLinkList<Obj3D> objs;
 	MultiLinkList<Obj3D> tras;
 	MultiLinkList<Obj3D> refl;
@@ -151,7 +150,8 @@ public:
 	}
 	Camera3D& addShadowCamera(EFTYPE width, EFTYPE height, EFTYPE znear, EFTYPE zfar, EFTYPE angle_width, EFTYPE angle_height) {
 		Cam3D * cam = new Cam3D(width, height, znear, zfar, angle_width, angle_height);
-		this->shaw.insertLink(cam);
+		cam->type = 1;
+		this->cams.insertLink(cam);
 
 		return *((Camera3D*)cam);
 	}

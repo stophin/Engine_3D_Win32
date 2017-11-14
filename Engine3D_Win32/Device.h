@@ -17,7 +17,6 @@ struct Device {
 	DWORD *trans;//Transparent buffer
 	FLOAT *deptr;//Reflection depth buffer
 	DWORD *miror;//Reflection bufer
-	FLOAT *shadr;//Reflection shade buffer
 
 	Graphics * graphics;
 	Gdiplus::Pen pen;
@@ -86,10 +85,6 @@ struct Device {
 			delete[] miror;
 			miror = NULL;
 		}
-		if (shadr) {
-			delete[] shadr;
-			shadr = NULL;
-		}
 	}
 
 	void Resize(INT w, INT h)  {
@@ -104,7 +99,6 @@ struct Device {
 		trans = new DWORD[width * height];
 		deptr = new FLOAT[width * height];
 		miror = new DWORD[width * height];
-		shadr = new FLOAT[width * height];
 		_image = image;
 		_tango = tango;
 		_trans = trans;
@@ -115,10 +109,11 @@ struct Device {
 	void RenderMirror(Manager3D & man, int move_light) {
 
 		Obj3D * obj = man.refl.link, *temp = NULL;
-		Mat3D mm;
+		Mat3D mm, mm_1, mml, mml_1;
 		if (obj) {
 			// save original camera matrix
 			mm.set(obj->cam->M);
+			mm_1.set(obj->cam->M_1);
 			do {
 
 				VObj * v = obj->verts_f.link;
@@ -135,6 +130,7 @@ struct Device {
 
 								// set camera matrix to vertex's reflection matrix
 								obj->cam->M.set(mm) * v->R;
+								obj->cam->M_1.set(v->R_r) * mm_1;
 								man.refresh(0);
 
 								// get reflection projection to array mirror
@@ -143,16 +139,10 @@ struct Device {
 								_tango = _mirror;
 								FLOAT * _depth = depth;
 								depth = deptr;
-								FLOAT * _shade = shade;
-								shade = shadr;
 								//memset(depth, 0, width * height * sizeof(FLOAT));
-								if (move_light > 0) {
-									RenderShade(man);
-								}
 								Render(man, v, v0, v1);
 								// restore target device and depth array
 								depth = _depth;
-								shade = _shade;
 								_tango = _temp;
 
 								DWORD * __trans, *__tango;
@@ -215,13 +205,25 @@ struct Device {
 			} while (obj && obj != man.refl.link);
 			// restore original camera matrix
 			obj->cam->M.set(mm);
+			obj->cam->M_1.set(mm_1);
 			man.refresh(0);
 		}
 	}
 
 
 	void RenderShade(Manager3D& man) {
-		if (man.shaw.linkcount <= 0) {
+		//switch to the shadow camera
+		Camera3D * cam = man.cams.link;
+		for (int i = 0; i < man.cams.linkcount; i++) {
+			if (man.cams.link && man.cams.link->type == 1) {
+				break;
+			}
+			man.nextCamera();
+		}
+		if (man.cams.link->type != 1) {
+			return;
+		}
+		if (NULL == man.cams.link) {
 			return;
 		}
 		memset(shade, 0, width * height * sizeof(FLOAT));
@@ -232,8 +234,8 @@ struct Device {
 
 		Obj3D * obj = man.objs.link;
 		if (obj) {
-			man.shaw.link->M.set(man.lgts.link->M_1);
-			man.shaw.link->M_1.set(man.lgts.link->M);
+			man.cams.link->M.set(man.lgts.link->M_1);
+			man.cams.link->M_1.set(man.lgts.link->M);
 			man.refresh(0);
 
 			int render_trans = 0;
@@ -320,6 +322,14 @@ struct Device {
 					}
 				}
 			} while (obj && obj != man.objs.link);
+		}
+
+		//restore original camera
+		for (int i = 0; i < man.cams.linkcount; i++) {
+			if (man.cams.link == cam) {
+				break;
+			}
+			man.nextCamera();
 		}
 	}
 
