@@ -9,4 +9,6 @@ WHAT's INCLUDED:
 
 2. simulated transparent object.
 
-3. silulated reflection object.
+3. silmulated reflection object.
+
+4. simulated texture renderer.
