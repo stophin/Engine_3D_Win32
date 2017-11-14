@@ -84,7 +84,12 @@ void onPaint(HWND hWnd) {
 	graphics->Clear(Color(0, 0, 0));
 	//Add paint code here
 	//Render in device buffer
+	if (move_light > 0) {
+		device.RenderShade(man);
+	}
+	device.ClearBeforeRender();
 	device.Render(man, NULL, NULL, NULL);
+	device.RenderMirror(man);
 	//Blt buffer to window buffer
 	int i, j, index;
 	for (i = 0; i < device.width; i++) {
@@ -123,14 +128,17 @@ void onResize(HWND hWnd) {
 	isrefresh = 1;
 }
 
+Object3D * mirror = NULL;
+
 void Initialize() {
 
 	man.addCamera(50, 50, 50, 1000, 90, 90).move(0, 0, -200);
 	man.addCamera(30, 30, 60, 600, 30, 30).move(0, 0, -100);
+	man.addShadowCamera(100, 100, 500, 1000, 180, 180);
 
-	man.addLight(9, -51, -60);
+	//man.addLight(9, -51, -60);
 	man.addLight(5, 8, 220);
-	//man.addLight(-1000, 100, 100);
+	man.addLight(-1000, 100, 100);
 
 	int count = 2;
 	int c = 30;
@@ -140,11 +148,18 @@ void Initialize() {
 
 
 	man.addObject().addVert(-10, -10, 10).addVert(10, -10, 10).addVert(-10, 10, 10).addVert(10, 10, 10, -1)
-		.scale(10, 10, 10).rotate(50, 0, 0).move(0, -30, -300).setColor(GREEN);
+		.scale(10, 10, 10)./*rotate(50, 0, 0).*/move(0, -30, -300).setColor(GREEN);
+	man.addObject().renderAABB().addVert(-10, -10, 10).addVert(10, -10, 10).addVert(-10, 10, 10).addVert(10, 10, 10, -1)
+		.addVert(10, 10, -10).addVert(10, -10, 10, -1).addVert(10, -10, -10).addVert(-10, -10, 10, -1).addVert(-10, -10, -10)
+		.addVert(-10, 10, 10, -1).addVert(-10, 10, -10).addVert(10, 10, -10, -1).addVert(-10, -10, -10).addVert(10, -10, -10, -1)
+		.scale(0.5, 0.5, 0.5).move(100, -15, -50).setColor(RED).setLineColor(BLUE);
 	man.addObject().renderAABB().addVert(-10, -10, 10).addVert(10, -10, 10).addVert(-10, 10, 10).addVert(10, 10, 10, -1)
 		.addVert(10, 10, -10).addVert(10, -10, 10, -1).addVert(10, -10, -10).addVert(-10, -10, 10, -1).addVert(-10, -10, -10)
 		.addVert(-10, 10, 10, -1).addVert(-10, 10, -10).addVert(10, 10, -10, -1).addVert(-10, -10, -10).addVert(10, -10, -10, -1)
 		.scale(0.5, 0.5, 0.5).move(0, -15, -50).setColor(RED).setLineColor(BLUE);
+	mirror = &man.addReflectionObject(1000).addVert(-10, 0, -10).addVert(10, 0, -10).addVert(-10, 0, 10).addVert(10, 0, 10, -1)
+		.scale(10, 10, 10).rotate(90, 90, 0).move(100, -20, 0).setColor(LIGHTGRAY).setLineColor(RED);
+
 
 	for (k = 0; k < count; k++) {
 		EFTYPE x = rand() % 300 - 150;
@@ -161,6 +176,9 @@ void Initialize() {
 					.addVert(x_2, r_2 * sin(j * p_2), -r_2 * cos(j * p_2), -1);
 			}
 			obj.addVert(x_1, 0, -r_1).addVert(x_2, 0, -r_2, -1).setCenter(0, 0, 0).move(x, y, z).rotate(0, 0, 0).setColor(GREEN).setLineColor(RED);
+			if (k == 0) {
+				obj.transparent = 1.01;
+			}
 		}
 	}
 
@@ -177,11 +195,10 @@ void Initialize() {
 		.addVert(10, 10, -10).addVert(10, -10, 10, -1).addVert(10, -10, -10).addVert(-10, -10, 10, -1).addVert(-10, -10, -10)
 		.addVert(-10, 10, 10, -1).addVert(-10, 10, -10).addVert(10, 10, -10, -1).addVert(-10, -10, -10).addVert(10, -10, -10, -1)
 		.scale(0.5, 0.5, 0.5).move(15, 0, -50).setColor(RED).setLineColor(BLUE);
-	man.addObject().renderAABB().addVert(-10, -10, 10).addVert(10, -10, 10).addVert(-10, 10, 10).addVert(10, 10, 10, -1)
+	man.addTransparentObject(1.01).renderAABB().addVert(-10, -10, 10).addVert(10, -10, 10).addVert(-10, 10, 10).addVert(10, 10, 10, -1)
 		.addVert(10, 10, -10).addVert(10, -10, 10, -1).addVert(10, -10, -10).addVert(-10, -10, 10, -1).addVert(-10, -10, -10)
 		.addVert(-10, 10, 10, -1).addVert(-10, 10, -10).addVert(10, 10, -10, -1).addVert(-10, -10, -10).addVert(10, -10, -10, -1)
 		.scale(0.5, 0.5, 0.5).move(0, 0, -50).setColor(BLUE).setLineColor(BLUE);
-
 }
 
 EFTYPE scale = 10.0;
@@ -325,6 +342,21 @@ VOID onKeyDown(WPARAM wParam, LPARAM lParam) {
 		break;
 	case 'P':
 		man.nextCamera();
+		break;
+	case 'A':
+		if (mirror) {
+			mirror->rotate(10, 0, 0);
+		}
+		break;
+	case 'S':
+		if (mirror) {
+			mirror->rotate(0, 10, 0);
+		}
+		break;
+	case 'D':
+		if (mirror) {
+			mirror->rotate(0, 0, 10);
+		}
 		break;
 	}
 	isrefresh = 1;

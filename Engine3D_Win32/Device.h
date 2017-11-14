@@ -14,6 +14,9 @@ struct Device {
 	DWORD *image;//Image buffer
 	DWORD *tango;//Target buffer
 	FLOAT *shade;//Shade buffer
+	DWORD *trans;//Transparent buffer
+	FLOAT *deptr;//Reflection depth buffer
+	DWORD *miror;//Reflection bufer
 
 	Graphics * graphics;
 	Gdiplus::Pen pen;
@@ -29,7 +32,7 @@ struct Device {
 	Vert3D n, n_1, n_2, n0, n1, n2, r;
 	DWORD * _tango, *_image, *_trans, *_mirror;
 	DWORD * __image, *__tango, *__trans, *__mirror;
-	FLOAT *__depth;
+	FLOAT *__depth, *__shade;
 	DWORD ___image, ___last = 0;
 
 	Device() :
@@ -39,6 +42,9 @@ struct Device {
 		image(NULL),
 		tango(NULL),
 		shade(NULL),
+		trans(NULL),
+		deptr(NULL),
+		miror(NULL),
 		pen((Color(0, 0, 0))){
 
 	}
@@ -67,6 +73,18 @@ struct Device {
 			delete[] shade;
 			shade = NULL;
 		}
+		if (trans) {
+			delete[] trans;
+			trans = NULL;
+		}
+		if (deptr) {
+			delete[] deptr;
+			deptr = NULL;
+		}
+		if (miror) {
+			delete[] miror;
+			miror = NULL;
+		}
 	}
 
 	void Resize(INT w, INT h)  {
@@ -78,15 +96,228 @@ struct Device {
 		image = new DWORD[width * height];
 		tango = new DWORD[width * height];
 		shade = new FLOAT[width * height];
+		trans = new DWORD[width * height];
+		deptr = new FLOAT[width * height];
+		miror = new DWORD[width * height];
 		_image = image;
 		_tango = tango;
+		_trans = trans;
+		_mirror = miror;
 	}
 
-	void Render(Manager3D& man, VObj * range, VObj * range0, VObj * range1) {
 
+	void RenderMirror(Manager3D & man) {
+
+		Obj3D * obj = man.refl.link, *temp = NULL;
+		Mat3D mm;
+		if (obj) {
+			// save original camera matrix
+			mm.set(obj->cam->M);
+			do {
+
+				VObj * v = obj->verts_f.link;
+				VObj * v0 = NULL, *v1 = NULL;
+				if (v && obj->verts_f.linkcount > 0) {
+
+					// do not refresh relection surfaces
+					temp = man.refl.link;
+					man.refl.link = NULL;
+					do {
+
+						if (v0 && v1) {
+							if (v->backface > 0) {
+
+								// set camera matrix to vertex's reflection matrix
+								obj->cam->M.set(mm) *v->R;
+								//obj->cam->M.set(v->R) * mm;
+								man.refresh(0);
+
+								// get reflection projection to array mirror
+								// need to change target device and depth array
+								DWORD * _temp = _tango;
+								_tango = _mirror;
+								FLOAT * _depth = depth;
+								depth = deptr;
+								//memset(depth, 0, width * height * sizeof(FLOAT));
+								Render(man, v, v0, v1);
+								// restore target device and depth array
+								depth = _depth;
+								_tango = _temp;
+
+								DWORD * __trans, *__tango;
+								INT index = 0, index_r = 0;
+								for (int i = v->ys; i <= v->ye && i < height; i++) {
+									for (int j = v->xs; j <= v->xe && j < width; j++) {
+										index = i * width + j;
+										__mirror = &_mirror[index];
+										//if (*__mirror != BLACK) 
+										{
+											EFTYPE z = Vert3D::getZ(v->n_d, v->x0, v->y0, v->z, (EFTYPE)j, (EFTYPE)i);
+											__depth = &depth[index];
+											if (EP_ISZERO(*__depth)) {
+												*__depth = z;
+											}
+											if (*__depth <= z) {
+												int res = Vert3D::IsInTriangle(v0->v_s, v1->v_s, v->v_s, p.set((FLOAT)j, (FLOAT)i, 0));
+												if (res) {
+													__tango = &_tango[index];
+													*__tango = Light3D::multi(*__mirror, 0.5);
+													*__depth = z;
+												}
+											}
+											*__mirror = BLACK;
+										}
+										deptr[index] = 0;
+									}
+								}
+							}
+
+							//ege::setcolor(RED);
+							//ege::line(v0->x0, v0->y0, v1->x0, v1->y0);
+							//ege::line(v1->x0, v1->y0, v->x0, v->y0);
+							//ege::line(v->x0, v->y0, v0->x0, v0->y0);
+							Draw_Line(_tango, width, height, v0->x0, v0->y0, v1->x0, v1->y0, WHITE);
+							Draw_Line(_tango, width, height, v1->x0, v1->y0, v->x0, v->y0, WHITE);
+							Draw_Line(_tango, width, height, v->x0, v->y0, v0->x0, v0->y0, WHITE);
+							v0 = v1;
+							v1 = v;
+						}
+						else if (v0 == NULL) {
+							v0 = v;
+						}
+						else if (v1 == NULL) {
+							v1 = v;
+						}
+
+						v = obj->verts_f.next(v);
+					} while (v && v != obj->verts_f.link);
+					// do not refresh relection surfaces
+					// so that there will be no loop
+					// and the parameters which passed to
+					// render() will not be changed
+					man.refl.link = temp;
+				}
+
+				obj = man.refl.next(obj);
+			} while (obj && obj != man.refl.link);
+			// restore original camera matrix
+			obj->cam->M.set(mm);
+			man.refresh(0);
+		}
+	}
+
+
+	void RenderShade(Manager3D& man) {
+		if (man.shaw.linkcount <= 0) {
+			return;
+		}
+		memset(shade, 0, width * height * sizeof(FLOAT));
+
+		Mat3D mm, mm_1;
+
+		VObj * _range = NULL;
+
+		Obj3D * obj = man.objs.link;
+		if (obj) {
+			man.shaw.link->M.set(man.lgts.link->M_1);
+			man.shaw.link->M_1.set(man.lgts.link->M);
+			man.refresh(0);
+
+			int render_trans = 0;
+			int trans_w0 = EP_MAX, trans_h0 = EP_MAX;
+			int trans_w1 = -EP_MAX, trans_h1 = -EP_MAX;
+			do {
+				VObj * v = obj->verts_r.link;
+				if (v && obj->verts_r.linkcount > 0) {
+					VObj *v0 = NULL, *v1 = NULL, *vtemp;
+					do {
+						if (v0 && v1) {
+							// back face cull
+							if (v->backface > 0) {
+
+								_range = v;
+								// in range
+								if (_range) {
+									__image = &___image;
+
+									EFTYPE z;
+									INT index = 0;
+									INT xs = _range == v ? v->xs : max(_range->xs, v->xs), ys = _range == v ? v->ys : max(_range->ys, v->ys),
+										xe = _range == v ? v->xe : min(_range->xe, v->xe), ye = _range == v ? v->ye : min(_range->ye, v->ye);
+									for (int i = ys; i <= ye && i < height; i++) {
+										for (int j = xs; j <= xe && j < width; j++) {
+											index = i * width + j;
+
+											// linear interpolation
+											int res = Vert3D::IsInTriangle(v0->v_s, v1->v_s, v->v_s, p.set((FLOAT)j, (FLOAT)i, 0));
+											if (res > 0) {
+												*__image = obj->color;
+												//*__image = obj->line;
+											}
+											else if (res < 0) {
+												*__image = obj->color;
+											}
+											else{
+												*__image = BLACK;
+											}
+
+											if (*__image != BLACK) {
+												__shade = &shade[index];
+												// get shade
+												//(-n.x * ((FLOAT)j - v.x) - n.y * ((FLOAT)i - v.y)) / n.z + v->z
+												z = Vert3D::getZ(v->n_d, v->x0, v->y0, v->z, (EFTYPE)j, (EFTYPE)i);
+												if (EP_ISZERO(*__shade)) {
+													*__shade = z;
+												}
+												if (*__shade <= z) {
+													*__shade = z;
+												}
+											}
+										}
+									}
+								}
+							}
+
+							v0 = v1;
+							v1 = v;
+						}
+						else if (v0 == NULL) {
+							v0 = v;
+						}
+						else if (v1 == NULL) {
+							v1 = v;
+						}
+
+						v = obj->verts_r.next(v);
+					} while (v && v != obj->verts_r.link);
+				}
+
+				if (render_trans == 0) {
+					obj = man.objs.next(obj);
+					if (!(obj && obj != man.objs.link)) {
+						obj = man.tras.link;
+						render_trans = 1;
+					}
+				}
+				else {
+					obj = man.tras.next(obj);
+					render_trans++;
+					if (!(obj && obj != man.tras.link)) {
+						break;
+					}
+				}
+			} while (obj && obj != man.objs.link);
+		}
+	}
+
+	void ClearBeforeRender() {
 		memset(depth, 0, width * height * sizeof(FLOAT));
 		memset(tango, 0, width * height * sizeof(DWORD));
 		memset(image, 0, width * height * sizeof(DWORD));
+		memset(trans, 0, width * height * sizeof(DWORD));
+	}
+
+	void Render(Manager3D& man, VObj * range, VObj * range0, VObj * range1) {
 		VObj * _range;
 
 		Mat3D mm;
@@ -106,7 +337,7 @@ struct Device {
 			Camera3D* cam = NULL;
 			Lgt3D * lgt;
 			FLOAT zz;
-			EFTYPE f, t, trans, _i, _j;
+			EFTYPE f, t, transparent, _i, _j;
 			do {
 				v = obj->verts_r.link;
 				if (v && obj->verts_r.linkcount > 0) {
@@ -188,6 +419,7 @@ struct Device {
 												}
 												if (*__depth <= z) {
 													__tango = &_tango[index];
+													__trans = &_trans[index];
 
 													if (render_linear < 0) {
 														// replace gradient color to object's color
@@ -234,11 +466,11 @@ struct Device {
 															r.set(n0);
 															t = r.negative() & v->n_r;
 															if (t < 0) t = -t;
-															trans = obj->transparent;
-															if (trans < 0) trans = -trans;
+															transparent = obj->transparent;
+															if (transparent < 0) transparent = -transparent;
 
-															_i = (i - obj->center_r.y) * (trans / t) + obj->center_r.y;
-															_j = (j - obj->center_r.x) * (trans / t) + obj->center_r.x;
+															_i = (i - obj->center_r.y) * (transparent / t) + obj->center_r.y;
+															_j = (j - obj->center_r.x) * (transparent / t) + obj->center_r.x;
 
 															if (obj->transparent < 0) {
 																_i = 2 * obj->center_r.y - _i;
@@ -246,7 +478,6 @@ struct Device {
 															}
 															if (!(_i < 0 || _i > height - 1 || _j < 0 || _j > width - 1)) {
 																_index = (INT)_i * width + (INT)_j;
-																__trans = &_trans[index];
 																//if (depth[_index] < z) 
 																if (1)
 																{
@@ -267,9 +498,10 @@ struct Device {
 														else {
 															*__image = Light3D::multi(*__image, f);
 															*__tango = *__image;
+															*__trans = BLACK;
 														}
 
-														//step5: get shadow map
+														//step5: render shadow map
 														cam = man.cams.link;
 														lgt = man.lgts.link;
 														n1.set(n0) *cam->M_1 * lgt->M_1;
@@ -282,6 +514,7 @@ struct Device {
 																_tango[_index] = RED;// obj->color;
 															}
 
+															//shadow
 															if (EP_GTZERO(shade[_index] - z - 1e-1)) {
 																*__tango = Light3D::multi(*__image, f / 5);
 															}
@@ -433,7 +666,7 @@ struct Device {
 				}
 				else if (ddx <= 0) {
 				}
-				if (ddy >= height * lpitch) {
+				else if (ddy >= height * lpitch) {
 				}
 				else if (ddy <= 0) {
 				}
@@ -466,11 +699,11 @@ struct Device {
 			for (index = 0; index <= dy; index++)
 			{
 				// set the pixel
-				if (ddx >= width) {
+				if (ddx >= lpitch) {
 				}
 				else if (ddx <= 0) {
 				}
-				if (ddy >= height * lpitch) {
+				else if (ddy >= height * lpitch) {
 				}
 				else if (ddy <= 0) {
 				}

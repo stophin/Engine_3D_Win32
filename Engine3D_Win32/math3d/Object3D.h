@@ -258,13 +258,14 @@ public:
 			this->v1 = NULL;
 			do {
 				if (this->reflection> 0) {
-					this->reflection --;
+					/*this->reflection --;
 					if (this->reflection == 0) {
 						this->reflection--;
-					}
+					}*/
 					v->n_w.set(v->n) * M;
 					v->n_w.normalize();
 					v->v_w.set(v->v) * M;
+					v->v_w.normalize();
 
 					// get reflection matrix
 					EFTYPE d = -(v->n_w & v->v_w);
@@ -273,6 +274,10 @@ public:
 					v->R.my.set(-2 * nx * ny, 1 - 2 * ny * ny, -2 * nz * ny, -2 * d * ny);
 					v->R.mz.set(-2 * nx * nz, -2 * ny * nz, 1 - 2 * nz * nz, -2 * d * nz);
 					v->R.mw.set(0, 0, 0, 1);
+					//v->R.mx.set(1 - 2 * nx * nx, -2 * ny * nx, -2 * nz * nx, 0);
+					//v->R.my.set(-2 * nx * ny, 1 - 2 * ny * ny, -2 * nz * ny,0);
+					//v->R.mz.set(-2 * nx * nz, -2 * ny * nz, 1 - 2 * nz * nz, 0);
+					//v->R.mw.set(-2 * d * nx, -2 * d * ny, -2 * d * nz, 1);
 					//v->R_r.set(v->R) * this->cam->M;
 				}
 				// object coordinate -> world coordinate -> camera coordinate
