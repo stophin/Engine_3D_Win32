@@ -73,6 +73,22 @@ public:
 
 		return *this;
 	}
+	Mat& operator +=(const Mat& m) {
+		this->x += m.x;
+		this->y += m.y;
+		this->z += m.z;
+		this->w += m.w;
+
+		return *this;
+	}
+	Mat& operator -=(const Mat& m) {
+		this->x -= m.x;
+		this->y -= m.y;
+		this->z -= m.z;
+		this->w -= m.w;
+
+		return *this;
+	}
 };
 
 typedef class Mat3D Mat3D;
@@ -139,6 +155,22 @@ public:
 		this->my = m.my;
 		this->mz = m.mz;
 		this->mw = m.mw;
+
+		return *this;
+	}
+	Mat3D& operator + (const Mat3D& m) {
+		this->mx += m.mx;
+		this->my += m.my;
+		this->mz += m.mz;
+		this->mw += m.mw;
+
+		return *this;
+	}
+	Mat3D& operator - (const Mat3D& m) {
+		this->mx -= m.mx;
+		this->my -= m.my;
+		this->mz -= m.mz;
+		this->mw -= m.mw;
 
 		return *this;
 	}

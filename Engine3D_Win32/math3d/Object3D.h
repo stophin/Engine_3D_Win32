@@ -98,7 +98,7 @@ typedef class Object3D Object3D;
 class Object3D {
 public:
 	Object3D() : 
-		_M(&M, &M_1, 1), texture(NULL),
+		_M(&M, NULL, 1), texture(NULL),
 		cam(NULL), verts(0), verts_r(1), verts_f(2), transparent(0), reflection(0), v0(NULL), v1(NULL), render_aabb(0){
 		center.init();
 		center_r.init();

@@ -85,9 +85,9 @@
   <ItemGroup>
     <ClInclude Include="common\EPoint.h" />
     <ClInclude Include="common\MultiLinkList.h" />
-    <ClInclude Include="Device.h" />
-    <ClInclude Include="Drawable.h" />
     <ClInclude Include="Engine3D_Win32.h" />
+    <ClInclude Include="flatform\Device.h" />
+    <ClInclude Include="flatform\Drawable.h" />
     <ClInclude Include="flatform\ELibrary.h" />
     <ClInclude Include="flatform\EPaint.h" />
     <ClInclude Include="math3d\Camera3D.h" />
@@ -106,8 +106,8 @@
   <ItemGroup>
     <ClCompile Include="common\EPoint.cpp" />
     <ClCompile Include="common\MultiLinkList.cpp" />
-    <ClCompile Include="Drawable.cpp" />
     <ClCompile Include="Engine3D_Win32.cpp" />
+    <ClCompile Include="flatform\Drawable.cpp" />
     <ClCompile Include="flatform\EPaint.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>

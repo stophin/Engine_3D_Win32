@@ -4,7 +4,7 @@
 #include "stdafx.h"
 #include "Engine3D_Win32.h"
 
-#include "Drawable.h"
+#include "flatform/Drawable.h"
 
 #define MAX_LOADSTRING 100
 
@@ -102,7 +102,7 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
    hInst = hInstance; // 将实例句柄存储在全局变量中
 
    hWnd = CreateWindow(szWindowClass, szTitle, WS_OVERLAPPEDWINDOW,
-      CW_USEDEFAULT, 0, 300, 200, NULL, NULL, hInstance, NULL);
+      CW_USEDEFAULT, 0, 800, 600, NULL, NULL, hInstance, NULL);
 
    if (!hWnd)
    {
