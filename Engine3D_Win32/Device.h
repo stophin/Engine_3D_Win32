@@ -460,6 +460,11 @@ struct Device {
 														//(-n_1.x * (n0.x - v->x) - n_1.y * (n0.y - v->y)) / n_1.z + v->zz;
 														zz = Vert3D::getZ(v->n_z, v->x, v->y, v->zz, n0.x, n0.y);
 														man.cams.link->anti_normalize(n0, zz);
+														n1.set(n0) * cam->M_1;
+
+														//set texture 
+														n2.set(n1) * obj->M;
+														*__image = obj->getTexture(n2.x, n2.y);
 
 														lgt = man.lgts.link;
 														f = 0;
@@ -518,7 +523,7 @@ struct Device {
 														//step5: render shadow map
 														cam = man.cams.link;
 														lgt = man.lgts.link;
-														n1.set(n0) *cam->M_1 * lgt->M_1;
+														n2.set(n1) * lgt->M_1;
 														man.cams.link->project(n1);
 														_j = (int)(n1.x * cam->scale_w + cam->offset_w), _i = (int)(n1.y * cam->scale_h + cam->offset_h);
 
@@ -530,13 +535,14 @@ struct Device {
 
 															//shadow
 															if (EP_GTZERO(shade[_index] - z - 1e-1)) {
-																*__tango = Light3D::multi(*__image, f / 5);
+																*__tango = Light3D::multi(*__image, f / 10);
 															}
 
 														}
+
 														if (render_proj > 0) {
 															cam = man.cams.link;
-															n1.set(n0) *cam->M_1 * cam->M;
+															n2.set(n1) * cam->M;
 															man.cams.link->project(n1);
 															_j = (int)(n1.x * cam->scale_w + cam->offset_w), _i = (int)(n1.y * cam->scale_h + cam->offset_h);
 

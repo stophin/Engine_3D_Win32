@@ -8,6 +8,7 @@
 #include "Camera3D.h"
 
 #include "../common/MultiLinkList.h"
+#include "../math3d/Texture.h"
 
 typedef class VObj VObj;
 class VObj {
@@ -97,7 +98,7 @@ typedef class Object3D Object3D;
 class Object3D {
 public:
 	Object3D() : 
-		_M(&M, NULL, 1),
+		_M(&M, &M_1, 1), texture(NULL),
 		cam(NULL), verts(0), verts_r(1), verts_f(2), transparent(0), reflection(0), v0(NULL), v1(NULL), render_aabb(0){
 		center.init();
 		center_r.init();
@@ -109,6 +110,39 @@ public:
 	~Object3D() {
 		this->verts.~MultiLinkList();
 		this->verts_r.~MultiLinkList();
+	}
+
+	DWORD *texture;
+	INT t_w;
+	INT t_h;
+
+	Object3D&   setTexture(TextureManage& tman, INT uID) {
+		Texture * ptexture = tman.textures.getLink(uID);
+
+		if (NULL == ptexture) {
+			return *this;
+		}
+
+		t_w = ptexture->width;
+		t_h = ptexture->height;
+		texture = ptexture->texture;
+
+		return *this;
+	}
+
+	DWORD getTexture(INT x, INT y) {
+		if (NULL == texture) {
+			return this->color;
+		}
+		x %= t_w;
+		y %= t_h;
+		if (x < 0) {
+			x = t_w + x;
+		}
+		if (y < 0) {
+			y = t_h + y;
+		}
+		return texture[x + y * t_w];
 	}
 
 	Camera3D * cam;
@@ -380,6 +414,7 @@ public:
 
 	Matrix3D _M;
 	Mat3D M;
+	Mat3D M_1;
 	Mat3D CM;
 	Object3D& move(EFTYPE dx, EFTYPE dy, EFTYPE dz) {
 		this->_M.move(dx, dy, dz);

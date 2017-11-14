@@ -96,6 +96,7 @@
     <ClInclude Include="math3d\Mat3D.h" />
     <ClInclude Include="math3d\Matrix3D.h" />
     <ClInclude Include="math3d\Object3D.h" />
+    <ClInclude Include="math3d\Texture.h" />
     <ClInclude Include="math3d\Trans3D.h" />
     <ClInclude Include="math3d\Vert3D.h" />
     <ClInclude Include="Resource.h" />
