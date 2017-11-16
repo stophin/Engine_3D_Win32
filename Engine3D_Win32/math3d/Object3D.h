@@ -34,6 +34,8 @@ public:
 			this->prev[i] = NULL;
 			this->next[i] = NULL;
 		}
+		aabb[0].set(-EP_MAX, -EP_MAX, -EP_MAX, 1);
+		aabb[1].set(EP_MAX, EP_MAX, EP_MAX, 1);
 	}
 	Vert3D v;
 	Vert3D v_c;
@@ -61,6 +63,7 @@ public:
 	Vert3D n_r;
 	Vert3D n_d;
 	Vert3D n_z;
+	Vert3D n_1_z;
 
 	EFTYPE zz;
 
@@ -73,6 +76,8 @@ public:
 	Mat3D R_r;
 
 	EFTYPE backface;
+
+	Vert3D aabb[2];
 
 	// for multilinklist
 	INT uniqueID;
@@ -98,7 +103,7 @@ typedef class Object3D Object3D;
 class Object3D {
 public:
 	Object3D() : 
-		_M(&M, NULL, 1), texture(NULL),
+		_M(&M, &M_1, 1), texture(NULL),
 		cam(NULL), verts(0), verts_r(1), verts_f(2), transparent(0), reflection(0), v0(NULL), v1(NULL), render_aabb(0){
 		center.init();
 		center_r.init();
@@ -115,8 +120,12 @@ public:
 	DWORD *texture;
 	INT t_w;
 	INT t_h;
+	// texture type
+	// 0: normal texture
+	// 1: SphereMap 
+	INT type;
 
-	Object3D&   setTexture(TextureManage& tman, INT uID) {
+	Object3D&   setTexture(TextureManage& tman, INT uID, INT t = 0) {
 		Texture * ptexture = tman.textures.getLink(uID);
 
 		if (NULL == ptexture) {
@@ -126,23 +135,25 @@ public:
 		t_w = ptexture->width;
 		t_h = ptexture->height;
 		texture = ptexture->texture;
+		type = t;
 
 		return *this;
 	}
 
-	DWORD getTexture(INT x, INT y) {
+	DWORD getTexture(EFTYPE x, EFTYPE y) {
 		if (NULL == texture) {
 			return this->color;
 		}
-		x %= t_w;
-		y %= t_h;
-		if (x < 0) {
-			x = t_w + x;
+		INT u = x * t_w, v = y * t_h;
+		u %= t_w;
+		v %= t_h;
+		if (u < 0) {
+			u = t_w + u;
 		}
-		if (y < 0) {
-			y = t_h + y;
+		if (v < 0) {
+			v = t_h + v;
 		}
-		return texture[x + y * t_w];
+		return texture[u + v * t_w];
 	}
 
 	Camera3D * cam;
@@ -205,6 +216,29 @@ public:
 			//this->verts.insertLink(new VObj(*v1));
 			//this->verts.insertLink(new VObj(*v0));
 
+			//aabb test
+			for (int i = 0; i < 3; i++) {
+				VObj * _v = NULL;
+				if (i == 0) {
+					_v = this->v0;
+				}
+				else if (i == 1) {
+					_v = this->v1;
+				}
+				else {
+					_v = v;
+				}
+				//max
+				if (v->aabb[0].x < _v->v.x) v->aabb[0].x = _v->v.x;
+				if (v->aabb[0].y < _v->v.y) v->aabb[0].y = _v->v.y;
+				if (v->aabb[0].z < _v->v.z) v->aabb[0].z = _v->v.z;
+
+				//min
+				if (v->aabb[1].x > _v->v.x) v->aabb[1].x = _v->v.x;
+				if (v->aabb[1].y > _v->v.y) v->aabb[1].y = _v->v.y;
+				if (v->aabb[1].z > _v->v.z) v->aabb[1].z = _v->v.z;
+			}
+
 			this->v0 = this->v1;
 			this->v1 = v;
 		}
@@ -216,10 +250,12 @@ public:
 		}
 
 		if (this->render_aabb) {
+			//max
 			if (this->aabb[0].x < v->v.x) this->aabb[0].x = v->v.x;
 			if (this->aabb[0].y < v->v.y) this->aabb[0].y = v->v.y;
 			if (this->aabb[0].z < v->v.z) this->aabb[0].z = v->v.z;
 
+			//min
 			if (this->aabb[6].x > v->v.x) this->aabb[6].x = v->v.x;
 			if (this->aabb[6].y > v->v.y) this->aabb[6].y = v->v.y;
 			if (this->aabb[6].z > v->v.z) this->aabb[6].z = v->v.z;
@@ -252,6 +288,7 @@ public:
 
 			if (this->render_aabb > 0) {
 				this->render_aabb = -this->render_aabb;
+				//8 quadrants
 				this->aabb[1].set(this->aabb[0].x, this->aabb[6].y, this->aabb[0].z, 1);
 				this->aabb[2].set(this->aabb[6].x, this->aabb[6].y, this->aabb[0].z, 1);
 				this->aabb[3].set(this->aabb[6].x, this->aabb[6].y, this->aabb[0].z, 1);
@@ -271,6 +308,7 @@ public:
 					}
 				}
 				if (i == 8) {
+					//not in camera
 					this->verts_r.clearLink();
 					this->verts_f.clearLink();
 					return;
@@ -339,6 +377,7 @@ public:
 
 						// get normal vector
 						v->n_r.set(v->n) ^ CM;
+						v->n_r.normalize();
 						// set x0 for all vertexes
 						v->v_s.set(v->x * this->cam->scale_w + this->cam->offset_w, v->y * this->cam->scale_h + this->cam->offset_h, v->z);
 
@@ -361,6 +400,10 @@ public:
 							v->n_z.set(v0->x - v->x, v0->y - v->y, v0->zz - v->zz);
 							this->center_r.set(v1->x - v->x, v1->y - v->y, v1->zz - v->zz);
 							v->n_z * this->center_r;
+							v->n_1_z.set(v0->x - v->x, v0->y - v->y, v0->z - v->z);
+							this->center_r.set(v1->x - v->x, v1->y - v->y, v1->z - v->z);
+							v->n_1_z * this->center_r;
+							
 
 							// get render range
 							v->xs = max(Vert3D::get_minx(v0->v_s, v1->v_s, v->v_s), 0);

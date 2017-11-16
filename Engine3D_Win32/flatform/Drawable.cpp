@@ -87,7 +87,7 @@ void onPaint(HWND hWnd) {
 	}
 	device.ClearBeforeRender();
 	device.Render(man, NULL, NULL, NULL);
-	device.RenderMirror(man, move_light);
+	device.RenderMirror(man);
 	//Blt buffer to window buffer
 	int i, j, index;
 	for (i = 0; i < device.width; i++) {
@@ -132,14 +132,15 @@ void Initialize() {
 
 	man.addCamera(50, 50, 50, 1000, 90, 90).move(0, 0, -200);
 	man.addCamera(30, 30, 60, 600, 30, 30).move(0, 0, -100);
-	man.addShadowCamera(50, 50, 60, 1000, 120, 120);
+	man.addShadowCamera();
+	man.addReflectionCamera();
 
 	man.addLight(5, 8, 220);
 	man.addLight(9, -51, -60);
 	man.addLight(-1000, 100, 100);
 
 	//load resource
-	INT t0 = tman.addTexture(480, 480);
+	INT t0 = tman.addTexture(480, 480, 2);
 	INT t1 = tman.addTexture(L"1.jpg");
 	INT t2 = tman.addTexture(L"2.jpg");
 	INT t3 = tman.addTexture(L"3.jpg");

@@ -26,8 +26,9 @@ struct Device {
 	EPoint e, s, v, c;
 	Vert3D p;
 	ege_colpoint cps[3];
-	Vert3D n, n_1, n_2, n0, n1, n2, r;
+	Vert3D n, n_1, n_2, n0, n1, n2, n3, r;
 	DWORD * _tango, *_image, *_trans, *_mirror;
+	FLOAT * _depth;
 	DWORD * __image, *__tango, *__trans, *__mirror;
 	FLOAT *__depth, *__shade;
 	DWORD ___image, ___last = 0;
@@ -98,24 +99,30 @@ struct Device {
 		_tango = tango;
 		_trans = trans;
 		_mirror = miror;
+		_depth = depth;
 	}
 
 	//must be called after depth was rendered
-	void RenderMirror(Manager3D & man, int move_light) {
+	void RenderMirror(Manager3D & man) {
+		//switch to the reflection camera
+		Camera3D * cur_cam = man.cams.link;
+		Camera3D * cam = man.getCamera(2);
+		if (NULL == cam || NULL == cur_cam) {
+			return;
+		}
+		//set cam parameters to current camera
+		cam->M.set(cur_cam->M);
+		cam->M_1.set(cur_cam->M_1);
 
 		Obj3D * obj = man.refl.link, *temp = NULL;
-		Mat3D mm, mm_1, mml, mml_1;
 		if (obj) {
-			// save original camera matrix
-			mm.set(obj->cam->M);
-			mm_1.set(obj->cam->M_1);
 			do {
 
 				VObj * v = obj->verts_f.link;
 				VObj * v0 = NULL, *v1 = NULL;
 				if (v && obj->verts_f.linkcount > 0) {
 
-					// do not refresh relection surfaces
+					// do not refresh relection surfaces to aviod dead loop
 					temp = man.refl.link;
 					man.refl.link = NULL;
 					do {
@@ -124,21 +131,21 @@ struct Device {
 							if (v->backface > 0) {
 
 								// set camera matrix to vertex's reflection matrix
-								obj->cam->M.set(mm) * v->R;
-								obj->cam->M_1.set(v->R_r) * mm_1;
-								man.refresh(0);
+								cur_cam->M.set(cam->M) * v->R;
+								cur_cam->M_1.set(v->R_r) * cam->M_1;
+								man.refresh(cur_cam);
 
 								// get reflection projection to array mirror
 								// need to change target device and depth array
-								DWORD * _temp = _tango;
+								DWORD * ___tango = _tango;
 								_tango = _mirror;
-								FLOAT * _depth = depth;
-								depth = deptr;
+								FLOAT * ___depth = _depth;
+								_depth = deptr;
 								//memset(depth, 0, width * height * sizeof(FLOAT));
 								Render(man, v, v0, v1);
 								// restore target device and depth array
-								depth = _depth;
-								_tango = _temp;
+								_depth = ___depth;
+								_tango = ___tango;
 
 								DWORD * __trans, *__tango;
 								INT index = 0, index_r = 0;
@@ -198,29 +205,29 @@ struct Device {
 
 				obj = man.refl.next(obj);
 			} while (obj && obj != man.refl.link);
-			// restore original camera matrix
-			obj->cam->M.set(mm);
-			obj->cam->M_1.set(mm_1);
-			man.refresh(0);
 		}
+
+		// restore current camera and refresh
+		cur_cam->M.set(cam->M);
+		cur_cam->M_1.set(cam->M_1);
+		man.refresh(NULL);
 	}
 
 
 	void RenderShade(Manager3D& man) {
 		//switch to the shadow camera
-		Camera3D * cam = man.cams.link;
-		for (int i = 0; i < man.cams.linkcount; i++) {
-			if (man.cams.link && man.cams.link->type == 1) {
-				break;
-			}
-			man.nextCamera();
-		}
-		if (man.cams.link->type != 1) {
+		Camera3D * cur_cam = man.cams.link;
+		Camera3D * cam = man.getCamera(1);
+		if (NULL == cam || NULL == cur_cam) {
 			return;
 		}
-		if (NULL == man.cams.link) {
+		Light3D * lgt = man.lgts.link;
+		if (NULL == lgt) {
 			return;
 		}
+		cam->M.set(cur_cam->M);
+		cam->M_1.set(cur_cam->M_1);
+
 		memset(shade, 0, width * height * sizeof(FLOAT));
 
 		Mat3D mm, mm_1;
@@ -228,10 +235,12 @@ struct Device {
 		VObj * _range = NULL;
 
 		Obj3D * obj = man.objs.link;
+
 		if (obj) {
-			man.cams.link->M.set(man.lgts.link->M_1);
-			man.cams.link->M_1.set(man.lgts.link->M);
-			man.refresh(0);
+			//set camera matrix to anti-light matrix
+			cur_cam->M.set(lgt->M_1);
+			cur_cam->M_1.set(lgt->M);
+			man.refresh(cur_cam);
 
 			int render_trans = 0;
 			int trans_w0 = EP_MAX, trans_h0 = EP_MAX;
@@ -275,7 +284,9 @@ struct Device {
 												__shade = &shade[index];
 												// get shade
 												//(-n.x * ((FLOAT)j - v.x) - n.y * ((FLOAT)i - v.y)) / n.z + v->z
-												z = Vert3D::getZ(v->n_d, v->x0, v->y0, v->z, (EFTYPE)j, (EFTYPE)i);
+												n0.set((j - cam->offset_w) / cam->scale_w, (i - cam->offset_h) / cam->scale_h, 0, 1);
+												//z = Vert3D::getZ(v->n_d, v->x0, v->y0, v->z0, (EFTYPE)j, (EFTYPE)i);
+												z = Vert3D::getZ(v->n_1_z, v->x, v->y, v->z, n0.x, n0.y);
 												if (EP_ISZERO(*__shade)) {
 													*__shade = z;
 												}
@@ -302,6 +313,8 @@ struct Device {
 					} while (v && v != obj->verts_r.link);
 				}
 
+				//first do objects till end
+				//then do transparent object
 				if (render_trans == 0) {
 					obj = man.objs.next(obj);
 					if (!(obj && obj != man.objs.link)) {
@@ -319,13 +332,10 @@ struct Device {
 			} while (obj && obj != man.objs.link);
 		}
 
-		//restore original camera
-		for (int i = 0; i < man.cams.linkcount; i++) {
-			if (man.cams.link == cam) {
-				break;
-			}
-			man.nextCamera();
-		}
+		// restore current camera and refresh
+		cur_cam->M.set(cam->M);
+		cur_cam->M_1.set(cam->M_1);
+		man.refresh(NULL);
 	}
 
 	void ClearBeforeRender() {
@@ -402,32 +412,50 @@ struct Device {
 									index = 0;
 									xs = _range == v ? v->xs : max(_range->xs, v->xs); ys = _range == v ? v->ys : max(_range->ys, v->ys);
 									xe = _range == v ? v->xe : min(_range->xe, v->xe); ye = _range == v ? v->ye : min(_range->ye, v->ye);
-									for (i = ys; i <= ye && i < height; i++) {
-										for (j = xs; j <= xe && j < width; j++) {
+									for (i = ys; i <= ye && i < height; i += 1) {
+										cam = obj->cam;
+										if (cam == NULL) {
+											break;
+										}
+										//little trick^_^
+										int line_state = 0;
+										for (j = xs; j <= xe && j < width; j += 1) {
+
 											index = i * width + j;
 											if (render_linear < 0) {
 												__image = &_image[index];
 											}
 											else {
 												// linear interpolation
-												res = Vert3D::IsInTriangle(v0->v_s, v1->v_s, v->v_s, p.set((FLOAT)j, (FLOAT)i, 0));
+												if (line_state <= 2) {
+													res = Vert3D::IsInTriangle(v0->v_s, v1->v_s, v->v_s, p.set((FLOAT)j, (FLOAT)i, 0));
+												}
+												else {
+													//trick here: double edge then do not test is in triangle
+													res = -1;
+												}
 												if (res > 0) {
 													*__image = obj->color;
 													//*__image = obj->line;
+													line_state++;
 												}
 												else if (res < 0) {
 													*__image = obj->color;
 												}
 												else{
 													*__image = BLACK;
+													line_state = 0;
 												}
 											}
 											//step2: depth test
 											if (*__image != BLACK) {
-												__depth = &depth[index];
+												__depth = &_depth[index];
+
 												// get depth
 												//(-n.x * ((FLOAT)j - v.x) - n.y * ((FLOAT)i - v.y)) / n.z + v->z
-												z = Vert3D::getZ(v->n_d, v->x0, v->y0, v->z, (EFTYPE)j, (EFTYPE)i);
+												n0.set((j - cam->offset_w) / cam->scale_w, (i - cam->offset_h) / cam->scale_h, 0, 1);
+												//z = Vert3D::getZ(v->n_d, v->x0, v->y0, v->z0, (EFTYPE)j, (EFTYPE)i);
+												z = Vert3D::getZ(v->n_1_z, v->x, v->y, v->z, n0.x, n0.y);
 												if (EP_ISZERO(*__depth)) {
 													*__depth = z;
 												}
@@ -453,103 +481,160 @@ struct Device {
 													}
 
 													//step3: render light
-													cam = obj->cam;
-													if (cam) {
-														n0.set((j - cam->offset_w) / cam->scale_w, (i - cam->offset_h) / cam->scale_h, z, 1);
-														// get position
-														//(-n_1.x * (n0.x - v->x) - n_1.y * (n0.y - v->y)) / n_1.z + v->zz;
-														zz = Vert3D::getZ(v->n_z, v->x, v->y, v->zz, n0.x, n0.y);
-														man.cams.link->anti_normalize(n0, zz);
-														n1.set(n0) * cam->M_1;
+													//n0.set((j - cam->offset_w) / cam->scale_w, (i - cam->offset_h) / cam->scale_h, z, 1);
+													n0.z = z;
+													// get position
+													n0 * cam->proj_1;
+													zz = (v->n_r.x * v->v_c.x + v->n_r.y * v->v_c.y + v->n_r.z * v->v_c.z) / 
+														(v->n_r.x * n0.x + v->n_r.y * n0.y  + v->n_r.z);
+													n0.x *= zz;
+													n0.y *= zz;
+													n0.z = zz;
+													n0.w = 1;
+													n1.set(n0)* cam->M_1;
 
+													if (obj->type == 0) {
 														//set texture 
-														n2.set(n1) * obj->M;
-														*__image = obj->getTexture(n2.x, n2.y);
+														n2.set(n1)*obj->M_1;
 
-														lgt = man.lgts.link;
-														f = 0;
-														if (lgt) {
-															do {
-																f += lgt->getFactor(v->n_r, n0);
-
-																if (render_light < 0) {
-																	break;
-																}
-
-																lgt = man.lgts.next(lgt);
-															} while (lgt && lgt != man.lgts.link);
-														}
-
-														//step4: render transparent
-														if (!EP_ISZERO(obj->transparent)) {
-															r.set(n0);
-															t = r.negative() & v->n_r;
-															if (t < 0) t = -t;
-															transparent = obj->transparent;
-															if (transparent < 0) transparent = -transparent;
-
-															_i = (i - obj->center_r.y) * (transparent / t) + obj->center_r.y;
-															_j = (j - obj->center_r.x) * (transparent / t) + obj->center_r.x;
-
-															if (obj->transparent < 0) {
-																_i = 2 * obj->center_r.y - _i;
-																_j = 2 * obj->center_r.x - _j;
+														//*__image = obj->getTexture(n2.y * obj->t_w, n2.z * obj->t_h);
+														//get the max projection coordinate? xy or yz or xz?
+														EFTYPE mx = v->aabb[0].x - v->aabb[1].x, my = v->aabb[0].y - v->aabb[1].y, mz = v->aabb[0].z - v->aabb[1].z;
+														//EFTYPE mx = obj->aabb[0].x - obj->aabb[6].x, my = obj->aabb[0].y - obj->aabb[6].y, mz = obj->aabb[0].z - obj->aabb[6].z;
+														EFTYPE sxy = n3.set(0, 0, 1) ^ (v->n), syz = n3.set(1, 0, 0) ^ (v->n), sxz = n3.set(0, 1, 0) ^ (v->n);
+														//EFTYPE sxy = mx * my, syz = my * mz, sxz = mx * mz;
+														if (sxy < 0) sxy = -sxy;
+														if (syz < 0) syz = -syz;
+														if (sxz < 0) sxz = -sxz;
+														if (mx < 0) mx = -mx;
+														if (my < 0) my = -my;
+														if (mz < 0) mz = -mz;
+														if (sxy > sxz) {
+															if (sxy > syz) {
+																*__image = obj->getTexture(n2.x / mx, n2.y / my);
 															}
-															if (!(_i < 0 || _i > height - 1 || _j < 0 || _j > width - 1)) {
-																_index = (INT)_i * width + (INT)_j;
-																//if (depth[_index] < z) 
-																if (1)
-																{
-																	*__trans = Light3D::add(*__image, _tango[_index], f);
-																}
-																else {
-																	*__trans = Light3D::multi(*__image, f);
-																}
-																if (*__trans == BLACK) {
-																	*__trans++;
-																}
-																if (trans_w1 < j) trans_w1 = j;
-																if (trans_h1 < i) trans_h1 = i;
-																if (trans_w0 > j) trans_w0 = j;
-																if (trans_h0 > i) trans_h0 = i;
+															else {
+																*__image = obj->getTexture(n2.y / my, n2.z / mz);
 															}
 														}
 														else {
-															*__image = Light3D::multi(*__image, f);
-															*__tango = *__image;
-															*__trans = BLACK;
+															if (sxz > syz) {
+																*__image = obj->getTexture(n2.x / mx, n2.z / mz);
+															}
+															else {
+																*__image = obj->getTexture(n2.y / my, n2.z / mz);
+															}
+														}
+													}
+													else if (obj->type == 1) {
+														//sphere map
+														// reflection vector
+														// R = I - 2 ( I * N ) N
+														n2.set(n0);// .normalize();
+														n3.set(v->n_r);
+														n3 * (n2 ^ n3) * 2;
+														n2 - n3;
+														// transition vector
+														// m = r + cam(0, 0, 1)
+														n2 + cam->lookat;
+														//n2.z += 1;
+														n2.normalize();
+
+														n2.x = n2.x * 0.5 + 0.5;
+														n2.y = n2.y * 0.5 + 0.5;
+														n2.z = n2.z * 0.5 + 0.5;
+
+														*__image = obj->getTexture(n2.x, n2.y);
+													}
+
+													//calculate sumption of light factors
+													lgt = man.lgts.link;
+													f = 0;
+													if (lgt) {
+														do {
+															f += lgt->getFactor(v->n_r, n0);
+
+															if (render_light < 0) {
+																break;
+															}
+
+															lgt = man.lgts.next(lgt);
+														} while (lgt && lgt != man.lgts.link);
+													}
+
+													//step4: render transparent
+													if (!EP_ISZERO(obj->transparent)) {
+														r.set(n0);
+														t = r.negative() & v->n_r;
+														if (t < 0) t = -t;
+														transparent = obj->transparent;
+														if (transparent < 0) transparent = -transparent;
+
+														_i = (i - obj->center_r.y) * (transparent / t) + obj->center_r.y;
+														_j = (j - obj->center_r.x) * (transparent / t) + obj->center_r.x;
+
+														if (obj->transparent < 0) {
+															_i = 2 * obj->center_r.y - _i;
+															_j = 2 * obj->center_r.x - _j;
+														}
+														if (!(_i < 0 || _i > height - 1 || _j < 0 || _j > width - 1)) {
+															_index = (INT)_i * width + (INT)_j;
+															//if (depth[_index] < z) 
+															if (1)
+															{
+																*__trans = Light3D::add(*__image, _tango[_index], f);
+															}
+															else {
+																*__trans = Light3D::multi(*__image, f);
+															}
+															if (*__trans == BLACK) {
+																//*__trans++;
+																*__trans = *__image;
+															}
+															//get transparent range
+															if (trans_w1 < j) trans_w1 = j;
+															if (trans_h1 < i) trans_h1 = i;
+															if (trans_w0 > j) trans_w0 = j;
+															if (trans_h0 > i) trans_h0 = i;
+														}
+													}
+													else {
+														*__image = Light3D::multi(*__image, f);
+														*__tango = *__image;
+													}
+
+													//step5: render shadow map
+													lgt = man.lgts.link;
+													n2.set(n1) * lgt->M_1;
+													cam->project(n2);
+													_j = (int)(n2.x * cam->scale_w + cam->offset_w), _i = (int)(n2.y * cam->scale_h + cam->offset_h);
+
+													if (!(_i < 0 || _i > height - 1 || _j < 0 || _j > width - 1)) {
+														_index = _i * width + _j;
+														__shade = &shade[_index];
+														if (render_proj > 0) {
+															_tango[_index] = RED;// obj->color;
 														}
 
-														//step5: render shadow map
-														cam = man.cams.link;
-														lgt = man.lgts.link;
-														n2.set(n1) * lgt->M_1;
-														man.cams.link->project(n1);
-														_j = (int)(n1.x * cam->scale_w + cam->offset_w), _i = (int)(n1.y * cam->scale_h + cam->offset_h);
+														//shadow
+														if (EP_GTZERO(*__shade - n2.z - 1e-1)) {
+															*__tango = Light3D::multi(*__image, f / 5);
+														}
+
+													}
+
+													if (render_proj > 0) {
+														n2.set(n0)*cam->M_1 *obj->M_1* obj->M* cam->M;
+														//n2.set(n1) * cam->M;
+														cam->project(n2);
+
+														INT __j = (int)(n2.x * cam->scale_w + cam->offset_w), __i = (int)(n2.y * cam->scale_h + cam->offset_h);
+														//Draw_Line(_tango, width, height, __j, __i, _j, _i, RED);
+														_j = __j, _i = __i;
 
 														if (!(_i < 0 || _i > height - 1 || _j < 0 || _j > width - 1)) {
 															_index = _i * width + _j;
-															if (render_proj > 0) {
-																_tango[_index] = RED;// obj->color;
-															}
-
-															//shadow
-															if (EP_GTZERO(shade[_index] - z - 1e-1)) {
-																*__tango = Light3D::multi(*__image, f / 10);
-															}
-
-														}
-
-														if (render_proj > 0) {
-															cam = man.cams.link;
-															n2.set(n1) * cam->M;
-															man.cams.link->project(n1);
-															_j = (int)(n1.x * cam->scale_w + cam->offset_w), _i = (int)(n1.y * cam->scale_h + cam->offset_h);
-
-															if (!(_i < 0 || _i > height - 1 || _j < 0 || _j > width - 1)) {
-																_index = _i * width + _j;
-																_tango[_index] = BLUE;// obj->color;
-															}
+															_tango[_index] = WHITE;// obj->color
 														}
 													}
 
@@ -558,13 +643,6 @@ struct Device {
 												if (render_linear < 0) {
 													*__image = BLACK;
 												}
-											}
-										}
-									}
-									if (render_linear < 0) {
-										for (i = v->ys; i <= v->ye && i < height; i++) {
-											for (j = v->xs; j <= v->xe && j < width; j++) {
-												_image[i * width + j] = BLACK;
 											}
 										}
 									}
@@ -585,6 +663,8 @@ struct Device {
 					} while (v && v != obj->verts_r.link);
 				}
 
+				//first do objects till end
+				//then do transparent object
 				if (render_trans == 0) {
 					obj = man.objs.next(obj);
 					if (!(obj && obj != man.objs.link)) {
@@ -596,6 +676,7 @@ struct Device {
 					obj = man.tras.next(obj);
 					render_trans++;
 					if (!(obj && obj != man.tras.link)) {
+						//render transparent after all transparent objects were done
 						index = 0;
 						for (i = trans_h0; i <= trans_h1 && i < height; i++) {
 							for (j = trans_w0; j <= trans_w1 && j < width; j++) {
@@ -619,7 +700,7 @@ struct Device {
 	int Draw_Line(DWORD* vb_start, int lpitch, int height,
 		int x1, int y1, // 起始点
 		int x2, int y2, // 终点
-		unsigned char color // 颜色像素
+		DWORD color // 颜色像素
 		) // video buffer and memory pitch
 	{
 		// this function draws a line from xo,yo to x1,y1 using differential error
