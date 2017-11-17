@@ -144,6 +144,7 @@ void Initialize() {
 	INT t1 = tman.addTexture(L"1.jpg");
 	INT t2 = tman.addTexture(L"2.jpg");
 	INT t3 = tman.addTexture(L"3.jpg");
+	INT t6 = tman.addTexture(L"6.jpg");
 
 	man.addObject().addVert(-10, -10, 10).addVert(10, -10, 10).addVert(-10, 10, 10).addVert(10, 10, 10, -1)
 		.scale(10, 10, 10)./*rotate(50, 0, 0).*/move(0, -30, -300).setColor(GREEN).setTexture(tman, t3);
@@ -161,8 +162,8 @@ void Initialize() {
 		.scale(10, 10, 10).rotate(-90, -90, 180).move(-100, -20, 0).setColor(LIGHTGRAY).setLineColor(RED).setTexture(tman, t3);
 
 
-	int count = 2;
-	int c = 20;
+	int count = 1;
+	int c = 100;
 	int i, j, k;
 	EFTYPE r = 10;
 	EFTYPE x_1, x_2, r_1, r_2, p_1 = PI / ((EFTYPE)c), p_2 = 2 * PI / ((EFTYPE)c);
@@ -181,8 +182,8 @@ void Initialize() {
 				obj.addVert(x_1, r_1 * sin(j * p_2), -r_1 * cos(j * p_2))
 					.addVert(x_2, r_2 * sin(j * p_2), -r_2 * cos(j * p_2), -1);
 			}
-			obj.addVert(x_1, 0, -r_1).addVert(x_2, 0, -r_2, -1).setCenter(0, 0, 0).move(x, y, z).rotate(0, 0, 0).setColor(GREEN).setLineColor(RED).setTexture(tman, t2);
-			if (k == 0) {
+			obj.addVert(x_1, 0, -r_1).addVert(x_2, 0, -r_2, -1).setCenter(0, 0, 0).scale(10, 10, 10).move(x, y, z).rotate(0, 0, 0).setColor(GREEN).setLineColor(RED).setTexture(tman, t6, 1);
+			if (k == 1) {
 				obj.transparent = 1.01;
 			}
 		}
